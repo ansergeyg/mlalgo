@@ -566,6 +566,14 @@ function logisticRegression(dataset, options = {}) {
     weights = weights.map((w, idx) => w - (learningRate / dataset.length) * gradW[idx]);
     bias -= (learningRate / dataset.length) * gradB;
   }
+  const accuracy = dataset.reduce((acc, { features, label }) => {
+    const prediction = sigmoid(weights[0] * features[0] + weights[1] * features[1] + bias);
+    const predictedClass = prediction >= 0.5 ? 1 : 0;
+    return acc + (predictedClass === label ? 1 : 0);
+  }, 0) / dataset.length;
+
+  return { weights, bias, accuracy };
+}
 function getRange(values) {
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -891,7 +899,6 @@ function addStoryDivider() {
 
 function buildLinearRegressionSection() {
   const defaultDataset = [
-  const dataset = [
     { hours: 1, score: 52 },
     { hours: 2, score: 57 },
     { hours: 3, score: 63 },
@@ -965,17 +972,17 @@ function buildLinearRegressionSection() {
   }
   section.appendChild(createTable(
     ['Session hours', 'Sweetness score'],
-    dataset.map((d) => ({ Hours: d.hours, Score: d.score }))
+    defaultDataset.map((d) => ({ Hours: d.hours, Score: d.score }))
   ));
 
-  const model = linearRegression(dataset);
+  const model = linearRegression(defaultDataset);
 
   const notes = document.createElement('p');
   notes.innerHTML = `The line Ada finds is <code>sweetness = ${formatNumber(model.intercept)} + ${formatNumber(model.slope)} × hours</code>.<br>She now has a simple rule-of-thumb for planning practice time.`;
   section.appendChild(notes);
 
   const canvas = createCanvas();
-  drawLinearRegressionPlot(canvas, dataset, model);
+  drawLinearRegressionPlot(canvas, defaultDataset, model);
   section.appendChild(canvas);
 
   section.appendChild(summarizeLinearRegression(model));
@@ -985,7 +992,6 @@ function buildLinearRegressionSection() {
 
 function buildLogisticRegressionSection() {
   const defaultDataset = [
-  const dataset = [
     { features: [2, 2], label: 0 },
     { features: [3, 3], label: 0 },
     { features: [4, 2], label: 0 },
@@ -1061,17 +1067,17 @@ function buildLogisticRegressionSection() {
   }
   section.appendChild(createTable(
     ['Crunchiness (1-10)', 'Color depth (1-10)', 'Ready for market?'],
-    dataset.map((d) => ({ Crunchiness: d.features[0], 'Color depth': d.features[1], Ready: d.label ? 'Yes' : 'No' }))
+    defaultDataset.map((d) => ({ Crunchiness: d.features[0], 'Color depth': d.features[1], Ready: d.label ? 'Yes' : 'No' }))
   ));
 
-  const model = logisticRegression(dataset, { learningRate: 0.1, epochs: 2500 });
+  const model = logisticRegression(defaultDataset, { learningRate: 0.1, epochs: 2500 });
 
   const notes = document.createElement('p');
   notes.innerHTML = 'Ada\'s rule now predicts a probability between 0 and 1. Apples above <code>50%</code> probability are shipped. The decision boundary is the bright blue line — in 2D it looks straight, but it comes from the S-shaped logistic curve.';
   section.appendChild(notes);
 
   const canvas = createCanvas();
-  drawLogisticRegressionPlot(canvas, dataset, model);
+  drawLogisticRegressionPlot(canvas, defaultDataset, model);
   section.appendChild(canvas);
 
   section.appendChild(summarizeLogisticRegression(model));
@@ -1081,7 +1087,6 @@ function buildLogisticRegressionSection() {
 
 function buildNeuralNetworkSection() {
   const defaultDataset = [
-  const dataset = [
     { features: [0, 0], label: 0 },
     { features: [0, 1], label: 1 },
     { features: [1, 0], label: 1 },
@@ -1153,17 +1158,17 @@ function buildNeuralNetworkSection() {
   }
   section.appendChild(createTable(
     ['Flavor surprise', 'Texture surprise', 'Special batch?'],
-    dataset.map((d) => ({ 'Flavor surprise': d.features[0], 'Texture surprise': d.features[1], 'Special batch?': d.label ? 'Yes' : 'No' }))
+    defaultDataset.map((d) => ({ 'Flavor surprise': d.features[0], 'Texture surprise': d.features[1], 'Special batch?': d.label ? 'Yes' : 'No' }))
   ));
 
-  const model = neuralNetwork(dataset, { learningRate: 0.8, epochs: 6000 });
+  const model = neuralNetwork(defaultDataset, { learningRate: 0.8, epochs: 6000 });
 
   const notes = document.createElement('p');
   notes.innerHTML = 'Two hidden neurons combine to build the familiar “S-shapes”, but stacking them lets Ada draw bends and corners. The colored background shows the network\'s confidence — orange for special batches, purple for ordinary ones.';
   section.appendChild(notes);
 
   const canvas = createCanvas();
-  drawNeuralNetworkPlot(canvas, dataset, model);
+  drawNeuralNetworkPlot(canvas, defaultDataset, model);
   section.appendChild(canvas);
 
   section.appendChild(summarizeNeuralNetwork(model));
