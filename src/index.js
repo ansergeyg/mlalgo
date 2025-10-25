@@ -8,11 +8,9 @@ root.style.lineHeight = '1.6';
 root.style.background = '#f9fbff';
 root.style.color = '#1f2933';
 
-if (!document.body.contains(root)) {
-  document.body.style.margin = '0';
-  document.body.style.background = '#e5ecf5';
-  document.body.appendChild(root);
-}
+document.body.style.margin = '0';
+document.body.style.background = '#e5ecf5';
+document.body.appendChild(root);
 
 document.title = 'Machine Learning Mini Story';
 
@@ -22,43 +20,6 @@ header.innerHTML = `
   <p style="margin-top: 0">Follow along as our orchard scientist, Ada, learns how data can guide better apple tasting!</p>
 `;
 root.appendChild(header);
-
-const DEFAULT_LINEAR_TASTINGS = Object.freeze([
-  { hours: 1, score: 52 },
-  { hours: 2, score: 57 },
-  { hours: 3, score: 63 },
-  { hours: 4, score: 69 },
-  { hours: 5, score: 75 },
-  { hours: 6, score: 83 },
-]);
-
-const DEFAULT_LOGISTIC_APPLES = Object.freeze([
-  { features: [2, 2], label: 0 },
-  { features: [3, 3], label: 0 },
-  { features: [4, 2], label: 0 },
-  { features: [6, 5], label: 1 },
-  { features: [7, 6], label: 1 },
-  { features: [8, 5], label: 1 },
-  { features: [5, 7], label: 1 },
-  { features: [3, 6], label: 0 },
-]);
-
-const DEFAULT_NEURAL_SURPRISES = Object.freeze([
-  { features: [0, 0], label: 0 },
-  { features: [0, 1], label: 1 },
-  { features: [1, 0], label: 1 },
-  { features: [1, 1], label: 0 },
-]);
-
-function cloneDataset(dataset) {
-  return dataset.map((item) => {
-    const copy = { ...item };
-    if (Array.isArray(item.features)) {
-      copy.features = [...item.features];
-    }
-    return copy;
-  });
-}
 
 function createSection(title, intro) {
   const section = document.createElement('section');
@@ -73,11 +34,9 @@ function createSection(title, intro) {
   heading.style.marginTop = '0';
   section.appendChild(heading);
 
-  if (intro) {
-    const introPara = document.createElement('p');
-    introPara.textContent = intro;
-    section.appendChild(introPara);
-  }
+  const introPara = document.createElement('p');
+  introPara.textContent = intro;
+  section.appendChild(introPara);
 
   return section;
 }
@@ -106,9 +65,9 @@ function createTable(headers, rows) {
   const tbody = document.createElement('tbody');
   rows.forEach((row, idx) => {
     const tr = document.createElement('tr');
-    headers.forEach((headerLabel) => {
+    Object.values(row).forEach((value, colIdx) => {
       const td = document.createElement('td');
-      td.textContent = row[headerLabel];
+      td.textContent = value;
       td.style.padding = '8px';
       td.style.borderBottom = '1px solid #e4e7eb';
       td.style.background = idx % 2 === 0 ? '#f8fafc' : '#ffffff';
@@ -136,7 +95,7 @@ function createCanvas(width = 360, height = 260) {
   return canvas;
 }
 
-function createJsonTrainer({ title, sample, onTrain, description, buttonLabel = 'Train on this data' }) {
+function createJsonTrainer({ title, sample, onTrain }) {
   const wrapper = document.createElement('div');
   wrapper.style.marginTop = '24px';
   wrapper.style.padding = '16px';
@@ -152,22 +111,15 @@ function createJsonTrainer({ title, sample, onTrain, description, buttonLabel = 
   heading.style.color = '#4338ca';
   wrapper.appendChild(heading);
 
-  const helper = document.createElement('p');
-  helper.textContent = description
-    || 'Paste a JSON array of examples and press “Train” to rerun the model on your own tasting notes. All values should be numeric.';
-  helper.style.marginTop = '0';
-  helper.style.fontSize = '0.9rem';
-  helper.style.color = '#334155';
-  wrapper.appendChild(helper);
+  const description = document.createElement('p');
+  description.textContent = 'Paste a JSON array of examples and press “Train” to rerun the model on your own tasting notes. All values should be numbers so the algorithms can learn properly.';
+  description.style.marginTop = '0';
+  description.style.fontSize = '0.9rem';
+  description.style.color = '#334155';
+  wrapper.appendChild(description);
 
   const textarea = document.createElement('textarea');
-  let defaultValue = '[]';
-  if (Array.isArray(sample)) {
-    defaultValue = JSON.stringify(cloneDataset(sample), null, 2);
-  } else if (sample && Array.isArray(sample.examples)) {
-    defaultValue = JSON.stringify(sample.examples, null, 2);
-  }
-  textarea.value = defaultValue;
+  textarea.value = JSON.stringify(sample, null, 2);
   textarea.style.width = '100%';
   textarea.style.minHeight = '160px';
   textarea.style.fontFamily = '"Fira Code", Consolas, monospace';
@@ -177,7 +129,6 @@ function createJsonTrainer({ title, sample, onTrain, description, buttonLabel = 
   textarea.style.borderRadius = '8px';
   textarea.style.boxSizing = 'border-box';
   textarea.style.background = '#ffffff';
-  textarea.spellcheck = false;
   wrapper.appendChild(textarea);
 
   const controls = document.createElement('div');
@@ -188,8 +139,7 @@ function createJsonTrainer({ title, sample, onTrain, description, buttonLabel = 
   wrapper.appendChild(controls);
 
   const button = document.createElement('button');
-  button.type = 'button';
-  button.textContent = buttonLabel;
+  button.textContent = 'Train on this data';
   button.style.padding = '10px 18px';
   button.style.border = 'none';
   button.style.borderRadius = '999px';
@@ -251,8 +201,10 @@ function parseBinaryLabel(value, description) {
   if (typeof value === 'boolean') {
     return value ? 1 : 0;
   }
-  if (typeof value === 'number' && (value === 0 || value === 1)) {
-    return value;
+  if (typeof value === 'number') {
+    if (value === 0 || value === 1) {
+      return value;
+    }
   }
   if (typeof value === 'string') {
     const normalized = value.trim().toLowerCase();
@@ -270,21 +222,26 @@ function parseLinearDataset(raw) {
   if (!Array.isArray(raw)) {
     throw new Error('Please provide a JSON array of tasting sessions.');
   }
+
   if (raw.length < 2) {
     throw new Error('Add at least two sessions so the line can be estimated.');
   }
+
   return raw.map((entry, index) => {
     if (entry == null || typeof entry !== 'object') {
       throw new Error(`Entry ${index + 1} must be an object with "hours" and "score".`);
     }
+
     const hours = extractNumber(entry, ['hours', 'Hours']);
     const score = extractNumber(entry, ['score', 'Score']);
-    if (!Number.isFinite(hours)) {
+
+    if (hours === undefined || !Number.isFinite(hours)) {
       throw new Error(`Entry ${index + 1} needs a numeric "hours" value.`);
     }
-    if (!Number.isFinite(score)) {
+    if (score === undefined || !Number.isFinite(score)) {
       throw new Error(`Entry ${index + 1} needs a numeric "score" value.`);
     }
+
     return { hours, score };
   });
 }
@@ -296,10 +253,12 @@ function parseLogisticDataset(raw) {
   if (raw.length === 0) {
     throw new Error('Add at least one apple example to train the classifier.');
   }
+
   return raw.map((entry, index) => {
     if (entry == null || typeof entry !== 'object') {
       throw new Error(`Entry ${index + 1} must be an object with tasting clues.`);
     }
+
     let features;
     if (Array.isArray(entry.features) && entry.features.length >= 2) {
       const first = toNumber(entry.features[0]);
@@ -318,11 +277,13 @@ function parseLogisticDataset(raw) {
     if (!features) {
       throw new Error(`Entry ${index + 1} needs either a "features" array or numeric "crunchiness" and "color depth" values.`);
     }
-    const labelSource = entry.label ?? entry.ready ?? entry.Ready ?? entry['Ready for market?'];
+
+    const labelSource = entry.label ?? entry.ready ?? entry['Ready'] ?? entry['Ready for market?'];
     if (labelSource === undefined) {
       throw new Error(`Entry ${index + 1} needs a yes/no outcome ("label" or "ready").`);
     }
     const label = parseBinaryLabel(labelSource, `Entry ${index + 1} outcome`);
+
     return { features, label };
   });
 }
@@ -334,10 +295,12 @@ function parseNeuralDataset(raw) {
   if (raw.length === 0) {
     throw new Error('Add at least one flavor pair so the network has something to learn.');
   }
+
   return raw.map((entry, index) => {
     if (entry == null || typeof entry !== 'object') {
       throw new Error(`Entry ${index + 1} must be an object with "features" or taste fields.`);
     }
+
     let features;
     if (Array.isArray(entry.features) && entry.features.length >= 2) {
       const first = toNumber(entry.features[0]);
@@ -356,11 +319,13 @@ function parseNeuralDataset(raw) {
     if (!features) {
       throw new Error(`Entry ${index + 1} needs a "features" array or flavor & texture numbers.`);
     }
-    const labelSource = entry.label ?? entry.special ?? entry.Special ?? entry['Special batch?'];
+
+    const labelSource = entry.label ?? entry.special ?? entry['Special'] ?? entry['Special batch?'];
     if (labelSource === undefined) {
       throw new Error(`Entry ${index + 1} needs a yes/no label ("label" or "special").`);
     }
     const label = parseBinaryLabel(labelSource, `Entry ${index + 1} label`);
+
     return { features, label };
   });
 }
@@ -381,7 +346,6 @@ function scale(value, domain, range) {
 }
 
 function drawAxes(ctx, width, height, margin, xLabel, yLabel) {
-  ctx.clearRect(0, 0, width, height);
   ctx.strokeStyle = '#9aa5b1';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -454,7 +418,8 @@ function drawLogisticRegressionPlot(canvas, dataset, model) {
   });
 
   const { weights, bias } = model;
-  const [w1, w2] = weights;
+  const w1 = weights[0];
+  const w2 = weights[1];
   if (Math.abs(w2) > 1e-6) {
     const xStart = xRange.min;
     const xEnd = xRange.max;
@@ -463,14 +428,10 @@ function drawLogisticRegressionPlot(canvas, dataset, model) {
     ctx.strokeStyle = '#0ea5e9';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(
-      scale(xStart, xRange, { min: margin.left, max: plotWidth - margin.right }),
-      scale(yStart, yRange, { min: plotHeight - margin.bottom, max: margin.top }),
-    );
-    ctx.lineTo(
-      scale(xEnd, xRange, { min: margin.left, max: plotWidth - margin.right }),
-      scale(yEnd, yRange, { min: plotHeight - margin.bottom, max: margin.top }),
-    );
+    ctx.moveTo(scale(xStart, xRange, { min: margin.left, max: plotWidth - margin.right }),
+      scale(yStart, yRange, { min: plotHeight - margin.bottom, max: margin.top }));
+    ctx.lineTo(scale(xEnd, xRange, { min: margin.left, max: plotWidth - margin.right }),
+      scale(yEnd, yRange, { min: plotHeight - margin.bottom, max: margin.top }));
     ctx.stroke();
   }
 }
@@ -552,21 +513,26 @@ function linearRegression(dataset) {
   if (dataset.length < 2) {
     throw new Error('Linear regression needs at least two sessions with different hours.');
   }
+
   const n = dataset.length;
   const sumX = dataset.reduce((acc, d) => acc + d.hours, 0);
   const sumY = dataset.reduce((acc, d) => acc + d.score, 0);
   const sumXY = dataset.reduce((acc, d) => acc + d.hours * d.score, 0);
   const sumXX = dataset.reduce((acc, d) => acc + d.hours * d.hours, 0);
+
   const denominator = n * sumXX - sumX * sumX;
   if (Math.abs(denominator) < 1e-12) {
     throw new Error('Provide varied hour values so the line has a slope.');
   }
+
   const slope = (n * sumXY - sumX * sumY) / denominator;
   const intercept = (sumY - slope * sumX) / n;
+
   const error = dataset.reduce((acc, d) => {
     const prediction = intercept + slope * d.hours;
     return acc + Math.abs(prediction - d.score);
   }, 0) / n;
+
   return { slope, intercept, error };
 }
 
@@ -578,6 +544,7 @@ function logisticRegression(dataset, options = {}) {
   if (dataset.length === 0) {
     throw new Error('Logistic regression needs at least one labeled apple.');
   }
+
   const learningRate = options.learningRate ?? 0.05;
   const epochs = options.epochs ?? 2500;
   let weights = [0, 0];
@@ -586,6 +553,7 @@ function logisticRegression(dataset, options = {}) {
   for (let epoch = 0; epoch < epochs; epoch += 1) {
     let gradW = [0, 0];
     let gradB = 0;
+
     dataset.forEach(({ features, label }) => {
       const linear = weights[0] * features[0] + weights[1] * features[1] + bias;
       const prediction = sigmoid(linear);
@@ -594,6 +562,228 @@ function logisticRegression(dataset, options = {}) {
       gradW[1] += error * features[1];
       gradB += error;
     });
+
+    weights = weights.map((w, idx) => w - (learningRate / dataset.length) * gradW[idx]);
+    bias -= (learningRate / dataset.length) * gradB;
+  }
+function getRange(values) {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (min === max) {
+    return { min: min - 1, max: max + 1 };
+  }
+  const padding = (max - min) * 0.1;
+  return { min: min - padding, max: max + padding };
+}
+
+function scale(value, domain, range) {
+  const ratio = (value - domain.min) / (domain.max - domain.min);
+  return range.min + ratio * (range.max - range.min);
+}
+
+function drawAxes(ctx, width, height, margin, xLabel, yLabel) {
+  ctx.strokeStyle = '#9aa5b1';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(margin.left, height - margin.bottom);
+  ctx.lineTo(width - margin.right, height - margin.bottom);
+  ctx.moveTo(margin.left, height - margin.bottom);
+  ctx.lineTo(margin.left, margin.top);
+  ctx.stroke();
+
+  ctx.fillStyle = '#52606d';
+  ctx.font = '12px system-ui';
+  ctx.fillText(xLabel, width - margin.right - 40, height - margin.bottom + 24);
+  ctx.fillText(yLabel, margin.left - 30, margin.top + 12);
+}
+
+function drawLinearRegressionPlot(canvas, dataset, model) {
+  const ctx = canvas.getContext('2d');
+  const margin = { top: 16, right: 16, bottom: 32, left: 48 };
+  const plotWidth = canvas.width;
+  const plotHeight = canvas.height;
+
+  const xRange = getRange(dataset.map((d) => d.hours));
+  const yRange = getRange(dataset.map((d) => d.score));
+
+  drawAxes(ctx, plotWidth, plotHeight, margin, 'Hours tasted', 'Sweetness score');
+
+  dataset.forEach((point) => {
+    const x = scale(point.hours, xRange, { min: margin.left, max: plotWidth - margin.right });
+    const y = scale(point.score, yRange, { min: plotHeight - margin.bottom, max: margin.top });
+    ctx.fillStyle = '#1d4ed8';
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  const xMin = xRange.min;
+  const xMax = xRange.max;
+  const yStart = model.intercept + model.slope * xMin;
+  const yEnd = model.intercept + model.slope * xMax;
+  const startX = scale(xMin, xRange, { min: margin.left, max: plotWidth - margin.right });
+  const endX = scale(xMax, xRange, { min: margin.left, max: plotWidth - margin.right });
+  const startY = scale(yStart, yRange, { min: plotHeight - margin.bottom, max: margin.top });
+  const endY = scale(yEnd, yRange, { min: plotHeight - margin.bottom, max: margin.top });
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+}
+
+function drawLogisticRegressionPlot(canvas, dataset, model) {
+  const ctx = canvas.getContext('2d');
+  const margin = { top: 16, right: 16, bottom: 32, left: 48 };
+  const plotWidth = canvas.width;
+  const plotHeight = canvas.height;
+
+  const xRange = getRange(dataset.map((d) => d.features[0]));
+  const yRange = getRange(dataset.map((d) => d.features[1]));
+
+  drawAxes(ctx, plotWidth, plotHeight, margin, 'Crunchiness', 'Color depth');
+
+  dataset.forEach((point) => {
+    const x = scale(point.features[0], xRange, { min: margin.left, max: plotWidth - margin.right });
+    const y = scale(point.features[1], yRange, { min: plotHeight - margin.bottom, max: margin.top });
+    ctx.fillStyle = point.label === 1 ? '#16a34a' : '#ef4444';
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  const { weights, bias } = model;
+  const w1 = weights[0];
+  const w2 = weights[1];
+  if (Math.abs(w2) > 1e-6) {
+    const xStart = xRange.min;
+    const xEnd = xRange.max;
+    const yStart = (-bias - w1 * xStart) / w2;
+    const yEnd = (-bias - w1 * xEnd) / w2;
+    ctx.strokeStyle = '#0ea5e9';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(scale(xStart, xRange, { min: margin.left, max: plotWidth - margin.right }),
+      scale(yStart, yRange, { min: plotHeight - margin.bottom, max: margin.top }));
+    ctx.lineTo(scale(xEnd, xRange, { min: margin.left, max: plotWidth - margin.right }),
+      scale(yEnd, yRange, { min: plotHeight - margin.bottom, max: margin.top }));
+    ctx.stroke();
+  }
+}
+
+function drawNeuralNetworkPlot(canvas, dataset, model) {
+  const ctx = canvas.getContext('2d');
+  const margin = { top: 16, right: 16, bottom: 32, left: 48 };
+  const plotWidth = canvas.width;
+  const plotHeight = canvas.height;
+
+  const xRange = { min: -0.1, max: 1.1 };
+  const yRange = { min: -0.1, max: 1.1 };
+
+  drawAxes(ctx, plotWidth, plotHeight, margin, 'Flavor surprise', 'Texture surprise');
+
+  const gridSteps = 40;
+  for (let gx = 0; gx <= gridSteps; gx += 1) {
+    for (let gy = 0; gy <= gridSteps; gy += 1) {
+      const xVal = xRange.min + (gx / gridSteps) * (xRange.max - xRange.min);
+      const yVal = yRange.min + (gy / gridSteps) * (yRange.max - yRange.min);
+      const prediction = model.predict([xVal, yVal]);
+      const colorValue = Math.round(prediction * 200);
+      ctx.fillStyle = `rgba(${colorValue}, ${220 - colorValue}, 255, 0.4)`;
+      const xPixel = scale(xVal, xRange, { min: margin.left, max: plotWidth - margin.right });
+      const yPixel = scale(yVal, yRange, { min: plotHeight - margin.bottom, max: margin.top });
+      const cellWidth = (plotWidth - margin.left - margin.right) / gridSteps;
+      const cellHeight = (plotHeight - margin.top - margin.bottom) / gridSteps;
+      ctx.fillRect(xPixel - cellWidth / 2, yPixel - cellHeight / 2, cellWidth, cellHeight);
+    }
+  }
+
+  dataset.forEach((point) => {
+    const x = scale(point.features[0], xRange, { min: margin.left, max: plotWidth - margin.right });
+    const y = scale(point.features[1], yRange, { min: plotHeight - margin.bottom, max: margin.top });
+    ctx.fillStyle = point.label === 1 ? '#f97316' : '#7c3aed';
+    ctx.beginPath();
+    ctx.arc(x, y, 7, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function formatNumber(value, digits = 2) {
+  return Number.parseFloat(value).toFixed(digits);
+}
+
+function summarizeLinearRegression(model) {
+  const list = document.createElement('ul');
+  list.innerHTML = `
+    <li>Slope (how much sweetness rises per extra tasting hour): <strong>${formatNumber(model.slope)}</strong></li>
+    <li>Intercept (sweetness before tasting even starts): <strong>${formatNumber(model.intercept)}</strong></li>
+    <li>Average prediction error: <strong>${formatNumber(model.error)}</strong></li>
+  `;
+  return list;
+}
+
+function summarizeLogisticRegression(model) {
+  const list = document.createElement('ul');
+  list.innerHTML = `
+    <li>Weights learned for crunchiness & color depth: <strong>${model.weights.map((w) => formatNumber(w)).join(', ')}</strong></li>
+    <li>Bias (baseline confidence): <strong>${formatNumber(model.bias)}</strong></li>
+    <li>Accuracy on the tasting notes: <strong>${formatNumber(model.accuracy * 100)}%</strong></li>
+  `;
+  return list;
+}
+
+function summarizeNeuralNetwork(model) {
+  const list = document.createElement('ul');
+  list.innerHTML = `
+    <li>Hidden taste detectors discovered: <strong>2 neurons</strong></li>
+    <li>Training epochs completed: <strong>${model.epochs}</strong></li>
+    <li>Accuracy on tricky surprises: <strong>${formatNumber(model.accuracy * 100)}%</strong></li>
+  `;
+  return list;
+}
+
+function linearRegression(dataset) {
+  const n = dataset.length;
+  const sumX = dataset.reduce((acc, d) => acc + d.hours, 0);
+  const sumY = dataset.reduce((acc, d) => acc + d.score, 0);
+  const sumXY = dataset.reduce((acc, d) => acc + d.hours * d.score, 0);
+  const sumXX = dataset.reduce((acc, d) => acc + d.hours * d.hours, 0);
+
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+
+  const error = dataset.reduce((acc, d) => {
+    const prediction = intercept + slope * d.hours;
+    return acc + Math.abs(prediction - d.score);
+  }, 0) / n;
+
+  return { slope, intercept, error };
+}
+
+function sigmoid(value) {
+  return 1 / (1 + Math.exp(-value));
+}
+
+function logisticRegression(dataset, options = {}) {
+  const learningRate = options.learningRate ?? 0.05;
+  const epochs = options.epochs ?? 2500;
+  let weights = [0, 0];
+  let bias = 0;
+
+  for (let epoch = 0; epoch < epochs; epoch += 1) {
+    let gradW = [0, 0];
+    let gradB = 0;
+
+    dataset.forEach(({ features, label }) => {
+      const linear = weights[0] * features[0] + weights[1] * features[1] + bias;
+      const prediction = sigmoid(linear);
+      const error = prediction - label;
+      gradW[0] += error * features[0];
+      gradW[1] += error * features[1];
+      gradB += error;
+    });
+
     weights = weights.map((w, idx) => w - (learningRate / dataset.length) * gradW[idx]);
     bias -= (learningRate / dataset.length) * gradB;
   }
@@ -611,8 +801,10 @@ function neuralNetwork(dataset, options = {}) {
   if (dataset.length === 0) {
     throw new Error('The neural network needs some labeled surprises to learn from.');
   }
+
   const learningRate = options.learningRate ?? 0.5;
   const epochs = options.epochs ?? 4000;
+
   let W1 = [
     [Math.random() - 0.5, Math.random() - 0.5],
     [Math.random() - 0.5, Math.random() - 0.5],
@@ -627,7 +819,7 @@ function neuralNetwork(dataset, options = {}) {
   };
 
   for (let epoch = 0; epoch < epochs; epoch += 1) {
-    let gradW1 = [[0, 0], [0, 0]];
+    let gradW1 = [ [0, 0], [0, 0] ];
     let gradB1 = [0, 0];
     let gradW2 = [0, 0];
     let gradB2 = 0;
@@ -697,80 +889,25 @@ function addStoryDivider() {
   root.appendChild(divider);
 }
 
-const lessons = [
-  {
-    key: 'linear',
-    title: 'Step 1 · Linear Regression — drawing the first tasting line',
-    intro: 'Ada starts by scoring apples after different tasting sessions. She hopes a straight-line rule will explain how sweetness improves the more she trains her senses.',
-    defaultDataset: cloneDataset(DEFAULT_LINEAR_TASTINGS),
-    parse: parseLinearDataset,
-    trainerTitle: 'Bring your own tasting sessions',
-    table: {
-      headers: ['Session hours', 'Sweetness score'],
-      mapRow: (d) => ({
-        'Session hours': formatNumber(d.hours, 2),
-        'Sweetness score': formatNumber(d.score, 2),
-      }),
-    },
-    train: (dataset) => linearRegression(dataset),
-    draw: (canvas, dataset, model) => drawLinearRegressionPlot(canvas, dataset, model),
-    summarize: (model) => summarizeLinearRegression(model),
-    story: (model) => `The line Ada finds is <code>sweetness = ${formatNumber(model.intercept)} + ${formatNumber(model.slope)} × hours</code>.<br>She now has a simple rule-of-thumb for planning practice time.`,
-    successMessage: (dataset) => `Trained on ${dataset.length} sessions!`,
-  },
-  {
-    key: 'logistic',
-    title: 'Step 2 · Logistic Regression — pass or fail the tasting?',
-    intro: 'Sweetness scores were useful, but the orchard team now needs a yes/no decision: which apples are ready for the market? Ada collects two clues per apple: crunchiness and color depth.',
-    defaultDataset: cloneDataset(DEFAULT_LOGISTIC_APPLES),
-    parse: parseLogisticDataset,
-    trainerTitle: 'Experiment with your own apples',
-    table: {
-      headers: ['Crunchiness (1-10)', 'Color depth (1-10)', 'Ready for market?'],
-      mapRow: (d) => ({
-        'Crunchiness (1-10)': formatNumber(d.features[0], 2),
-        'Color depth (1-10)': formatNumber(d.features[1], 2),
-        'Ready for market?': d.label ? 'Yes' : 'No',
-      }),
-    },
-    train: (dataset) => logisticRegression(dataset, { learningRate: 0.1, epochs: 2500 }),
-    draw: (canvas, dataset, model) => drawLogisticRegressionPlot(canvas, dataset, model),
-    summarize: (model) => summarizeLogisticRegression(model),
-    story: 'Ada\'s rule now predicts a probability between 0 and 1. Apples above <code>50%</code> probability are shipped. The decision boundary is the bright blue line — in 2D it looks straight, but it comes from the S-shaped logistic curve.',
-    successMessage: (dataset) => `Re-trained on ${dataset.length} apples!`,
-  },
-  {
-    key: 'neural',
-    title: 'Step 3 · Neural Network — catching surprising flavor combos',
-    intro: 'The final tasting challenge is trickier. Some apples only shine when either texture or flavor is surprising, but not both at the same time. Simple lines cannot describe this “either/or” rule, so Ada builds a tiny neural network with a hidden layer to spot the pattern.',
-    defaultDataset: cloneDataset(DEFAULT_NEURAL_SURPRISES),
-    parse: parseNeuralDataset,
-    trainerTitle: 'Invent new surprise combos',
-    table: {
-      headers: ['Flavor surprise', 'Texture surprise', 'Special batch?'],
-      mapRow: (d) => ({
-        'Flavor surprise': formatNumber(d.features[0], 2),
-        'Texture surprise': formatNumber(d.features[1], 2),
-        'Special batch?': d.label ? 'Yes' : 'No',
-      }),
-    },
-    train: (dataset) => neuralNetwork(dataset, { learningRate: 0.8, epochs: 6000 }),
-    draw: (canvas, dataset, model) => drawNeuralNetworkPlot(canvas, dataset, model),
-    summarize: (model) => summarizeNeuralNetwork(model),
-    story: 'Two hidden neurons combine to build the familiar “S-shapes”, but stacking them lets Ada draw bends and corners. The colored background shows the network\'s confidence — orange for special batches, purple for ordinary ones.',
-    successMessage: (dataset) => `Re-trained on ${dataset.length} flavor pairs!`,
-  },
-];
+function buildLinearRegressionSection() {
+  const defaultDataset = [
+  const dataset = [
+    { hours: 1, score: 52 },
+    { hours: 2, score: 57 },
+    { hours: 3, score: 63 },
+    { hours: 4, score: 69 },
+    { hours: 5, score: 75 },
+    { hours: 6, score: 83 },
+  ];
 
-function buildLesson(lesson) {
-  const section = createSection(lesson.title, lesson.intro);
+  const section = createSection(
+    'Step 1 · Linear Regression — drawing the first tasting line',
+    'Ada starts by scoring apples after different tasting sessions. She hopes a straight-line rule will explain how sweetness improves the more she trains her senses.'
+  );
 
   const tableContainer = document.createElement('div');
   const insight = document.createElement('p');
   insight.style.marginTop = '8px';
-  if (typeof lesson.story === 'string') {
-    insight.innerHTML = lesson.story;
-  }
   const canvasContainer = document.createElement('div');
   const summaryContainer = document.createElement('div');
   summaryContainer.style.marginTop = '16px';
@@ -781,11 +918,10 @@ function buildLesson(lesson) {
   section.appendChild(summaryContainer);
 
   const render = (dataset) => {
-    const datasetCopy = cloneDataset(dataset);
     tableContainer.innerHTML = '';
     const table = createTable(
-      lesson.table.headers,
-      datasetCopy.map((entry) => lesson.table.mapRow(entry)),
+      ['Session hours', 'Sweetness score'],
+      dataset.map((d) => ({ Hours: formatNumber(d.hours, 2), Score: formatNumber(d.score, 2) }))
     );
     tableContainer.appendChild(table);
 
@@ -793,58 +929,250 @@ function buildLesson(lesson) {
     summaryContainer.innerHTML = '';
 
     try {
-      const model = lesson.train(datasetCopy);
-      if (lesson.story) {
-        if (typeof lesson.story === 'function') {
-          insight.innerHTML = lesson.story(model, datasetCopy);
-        } else {
-          insight.innerHTML = lesson.story;
-        }
-        insight.style.color = '#1f2933';
-      }
+      const model = linearRegression(dataset);
+      insight.style.color = '#1f2933';
+      insight.innerHTML = `The line Ada finds is <code>sweetness = ${formatNumber(model.intercept)} + ${formatNumber(model.slope)} × hours</code>.<br>She now has a simple rule-of-thumb for planning practice time.`;
       const canvas = createCanvas();
-      lesson.draw(canvas, datasetCopy, model);
+      drawLinearRegressionPlot(canvas, dataset, model);
       canvasContainer.appendChild(canvas);
       summaryContainer.style.color = '#1f2933';
-      const summaryNode = lesson.summarize(model, datasetCopy);
-      if (summaryNode) {
-        summaryContainer.appendChild(summaryNode);
-      }
-      return model;
+      summaryContainer.appendChild(summarizeLinearRegression(model));
     } catch (error) {
       insight.style.color = '#dc2626';
       insight.textContent = error.message;
       summaryContainer.style.color = '#dc2626';
       summaryContainer.textContent = 'Adjust the data and try again.';
-      canvasContainer.innerHTML = '';
       throw error;
     }
   };
 
   const trainer = createJsonTrainer({
-    title: lesson.trainerTitle,
-    sample: lesson.defaultDataset,
+    title: 'Bring your own tasting sessions',
+    sample: defaultDataset,
     onTrain: (raw) => {
-      const parsed = lesson.parse(raw);
+      const parsed = parseLinearDataset(raw);
       render(parsed);
-      return lesson.successMessage ? lesson.successMessage(parsed) : `Updated with ${parsed.length} entries.`;
+      return `Trained on ${parsed.length} sessions!`;
     },
   });
 
   section.appendChild(trainer.wrapper);
 
   try {
-    render(lesson.defaultDataset);
+    render(defaultDataset);
   } catch (error) {
     trainer.setStatus(error.message, true);
   }
+  section.appendChild(createTable(
+    ['Session hours', 'Sweetness score'],
+    dataset.map((d) => ({ Hours: d.hours, Score: d.score }))
+  ));
+
+  const model = linearRegression(dataset);
+
+  const notes = document.createElement('p');
+  notes.innerHTML = `The line Ada finds is <code>sweetness = ${formatNumber(model.intercept)} + ${formatNumber(model.slope)} × hours</code>.<br>She now has a simple rule-of-thumb for planning practice time.`;
+  section.appendChild(notes);
+
+  const canvas = createCanvas();
+  drawLinearRegressionPlot(canvas, dataset, model);
+  section.appendChild(canvas);
+
+  section.appendChild(summarizeLinearRegression(model));
 
   root.appendChild(section);
 }
 
-lessons.forEach((lesson, index) => {
-  buildLesson(lesson);
-  if (index < lessons.length - 1) {
-    addStoryDivider();
+function buildLogisticRegressionSection() {
+  const defaultDataset = [
+  const dataset = [
+    { features: [2, 2], label: 0 },
+    { features: [3, 3], label: 0 },
+    { features: [4, 2], label: 0 },
+    { features: [6, 5], label: 1 },
+    { features: [7, 6], label: 1 },
+    { features: [8, 5], label: 1 },
+    { features: [5, 7], label: 1 },
+    { features: [3, 6], label: 0 },
+  ];
+
+  const section = createSection(
+    'Step 2 · Logistic Regression — pass or fail the tasting?',
+    'Sweetness scores were useful, but the orchard team now needs a yes/no decision: which apples are ready for the market? Ada collects two clues per apple: crunchiness and color depth.'
+  );
+
+  const tableContainer = document.createElement('div');
+  const story = document.createElement('p');
+  story.innerHTML = 'Ada\'s rule now predicts a probability between 0 and 1. Apples above <code>50%</code> probability are shipped. The decision boundary is the bright blue line — in 2D it looks straight, but it comes from the S-shaped logistic curve.';
+  const canvasContainer = document.createElement('div');
+  const summaryContainer = document.createElement('div');
+  summaryContainer.style.marginTop = '16px';
+
+  section.appendChild(tableContainer);
+  section.appendChild(story);
+  section.appendChild(canvasContainer);
+  section.appendChild(summaryContainer);
+
+  const render = (dataset) => {
+    tableContainer.innerHTML = '';
+    const table = createTable(
+      ['Crunchiness (1-10)', 'Color depth (1-10)', 'Ready for market?'],
+      dataset.map((d) => ({
+        Crunchiness: formatNumber(d.features[0], 2),
+        'Color depth': formatNumber(d.features[1], 2),
+        Ready: d.label ? 'Yes' : 'No',
+      }))
+    );
+    tableContainer.appendChild(table);
+
+    canvasContainer.innerHTML = '';
+    summaryContainer.innerHTML = '';
+    summaryContainer.style.color = '#1f2933';
+
+    try {
+      const model = logisticRegression(dataset, { learningRate: 0.1, epochs: 2500 });
+      const canvas = createCanvas();
+      drawLogisticRegressionPlot(canvas, dataset, model);
+      canvasContainer.appendChild(canvas);
+      summaryContainer.appendChild(summarizeLogisticRegression(model));
+    } catch (error) {
+      summaryContainer.style.color = '#dc2626';
+      summaryContainer.textContent = error.message;
+      throw error;
+    }
+  };
+
+  const trainer = createJsonTrainer({
+    title: 'Experiment with your own apples',
+    sample: defaultDataset,
+    onTrain: (raw) => {
+      const parsed = parseLogisticDataset(raw);
+      render(parsed);
+      return `Re-trained on ${parsed.length} apples!`;
+    },
+  });
+
+  section.appendChild(trainer.wrapper);
+
+  try {
+    render(defaultDataset);
+  } catch (error) {
+    trainer.setStatus(error.message, true);
   }
-});
+  section.appendChild(createTable(
+    ['Crunchiness (1-10)', 'Color depth (1-10)', 'Ready for market?'],
+    dataset.map((d) => ({ Crunchiness: d.features[0], 'Color depth': d.features[1], Ready: d.label ? 'Yes' : 'No' }))
+  ));
+
+  const model = logisticRegression(dataset, { learningRate: 0.1, epochs: 2500 });
+
+  const notes = document.createElement('p');
+  notes.innerHTML = 'Ada\'s rule now predicts a probability between 0 and 1. Apples above <code>50%</code> probability are shipped. The decision boundary is the bright blue line — in 2D it looks straight, but it comes from the S-shaped logistic curve.';
+  section.appendChild(notes);
+
+  const canvas = createCanvas();
+  drawLogisticRegressionPlot(canvas, dataset, model);
+  section.appendChild(canvas);
+
+  section.appendChild(summarizeLogisticRegression(model));
+
+  root.appendChild(section);
+}
+
+function buildNeuralNetworkSection() {
+  const defaultDataset = [
+  const dataset = [
+    { features: [0, 0], label: 0 },
+    { features: [0, 1], label: 1 },
+    { features: [1, 0], label: 1 },
+    { features: [1, 1], label: 0 },
+  ];
+
+  const section = createSection(
+    'Step 3 · Neural Network — catching surprising flavor combos',
+    'The final tasting challenge is trickier. Some apples only shine when either texture or flavor is surprising, but not both at the same time. Simple lines cannot describe this “either/or” rule, so Ada builds a tiny neural network with a hidden layer to spot the pattern.'
+  );
+
+  const tableContainer = document.createElement('div');
+  const story = document.createElement('p');
+  story.textContent = 'Two hidden neurons combine to build the familiar “S-shapes”, but stacking them lets Ada draw bends and corners. The colored background shows the network\'s confidence — orange for special batches, purple for ordinary ones.';
+  const canvasContainer = document.createElement('div');
+  const summaryContainer = document.createElement('div');
+  summaryContainer.style.marginTop = '16px';
+
+  section.appendChild(tableContainer);
+  section.appendChild(story);
+  section.appendChild(canvasContainer);
+  section.appendChild(summaryContainer);
+
+  const render = (dataset) => {
+    tableContainer.innerHTML = '';
+    const table = createTable(
+      ['Flavor surprise', 'Texture surprise', 'Special batch?'],
+      dataset.map((d) => ({
+        'Flavor surprise': formatNumber(d.features[0], 2),
+        'Texture surprise': formatNumber(d.features[1], 2),
+        'Special batch?': d.label ? 'Yes' : 'No',
+      }))
+    );
+    tableContainer.appendChild(table);
+
+    canvasContainer.innerHTML = '';
+    summaryContainer.innerHTML = '';
+    summaryContainer.style.color = '#1f2933';
+
+    try {
+      const model = neuralNetwork(dataset, { learningRate: 0.8, epochs: 6000 });
+      const canvas = createCanvas();
+      drawNeuralNetworkPlot(canvas, dataset, model);
+      canvasContainer.appendChild(canvas);
+      summaryContainer.appendChild(summarizeNeuralNetwork(model));
+    } catch (error) {
+      summaryContainer.style.color = '#dc2626';
+      summaryContainer.textContent = error.message;
+      throw error;
+    }
+  };
+
+  const trainer = createJsonTrainer({
+    title: 'Invent new surprise combos',
+    sample: defaultDataset,
+    onTrain: (raw) => {
+      const parsed = parseNeuralDataset(raw);
+      render(parsed);
+      return `Re-trained on ${parsed.length} flavor pairs!`;
+    },
+  });
+
+  section.appendChild(trainer.wrapper);
+
+  try {
+    render(defaultDataset);
+  } catch (error) {
+    trainer.setStatus(error.message, true);
+  }
+  section.appendChild(createTable(
+    ['Flavor surprise', 'Texture surprise', 'Special batch?'],
+    dataset.map((d) => ({ 'Flavor surprise': d.features[0], 'Texture surprise': d.features[1], 'Special batch?': d.label ? 'Yes' : 'No' }))
+  ));
+
+  const model = neuralNetwork(dataset, { learningRate: 0.8, epochs: 6000 });
+
+  const notes = document.createElement('p');
+  notes.innerHTML = 'Two hidden neurons combine to build the familiar “S-shapes”, but stacking them lets Ada draw bends and corners. The colored background shows the network\'s confidence — orange for special batches, purple for ordinary ones.';
+  section.appendChild(notes);
+
+  const canvas = createCanvas();
+  drawNeuralNetworkPlot(canvas, dataset, model);
+  section.appendChild(canvas);
+
+  section.appendChild(summarizeNeuralNetwork(model));
+
+  root.appendChild(section);
+}
+
+buildLinearRegressionSection();
+addStoryDivider();
+buildLogisticRegressionSection();
+addStoryDivider();
+buildNeuralNetworkSection();
