@@ -96,9 +96,35 @@ Tiny example
 - Sigmoid + cross-entropy in classification: stable learning signal (p̂ − y) and valid probabilities.
 - Tiny neural net: the smallest setup that can model non-linearly separable patterns; easy to visualize and fast to train.
 
+## Why regressions are foundational in ML
+
+- Simple, strong baselines: Linear and logistic regression often match or beat fancy models on small, clean datasets. They set a trustworthy bar for performance.
+- Interpretable parameters: Slopes (weights) tell you how much each feature moves the prediction. Intercepts (biases) capture the baseline. This builds intuition fast.
+- Convex training (for linear/logistic): With proper features, there is a single best solution; gradient methods reliably find it. Great for learning and debugging.
+- Building blocks for bigger models: Logistic regression is essentially a one‑layer neural network with a sigmoid; stacking such units yields deep nets.
+- Links to statistics: They are special cases of generalized linear models (GLMs), tying ML to hypothesis testing, confidence intervals, and model diagnostics.
+- Feature engineering playground: You can make linear models surprisingly powerful by adding transformed features (squares, interactions), teaching core ideas like bias‑variance trade‑off and regularization.
+
+In short: regressions teach prediction, probability, optimization, and generalization with the fewest moving parts, which is why they anchor most ML courses and practical workflows.
+
+## Terminology clarifications (plain English)
+
+- Feature: An input number describing the example (e.g., crunchiness, color depth).
+- Label/Target: The thing to predict (e.g., sweetness score, ready vs. not).
+- Weight (parameter): The learned importance of a feature. Larger magnitude ⇒ stronger effect.
+- Bias/Intercept: The baseline prediction when features are zero.
+- Sigmoid (logistic) function: S‑shaped curve that turns any number into a probability between 0 and 1.
+- Decision boundary: The surface where the classifier flips its decision (e.g., p̂ = 0.5). A line in 2D, a plane in 3D.
+- Noise (not “nose”): Random wiggles in data you can’t explain with features (measurement error, natural variability). Good models don’t try to “memorize” noise.
+- Overfitting: When a model learns noise or quirks of the training data and performs worse on new data.
+- Underfitting: When a model is too simple to capture the real pattern (e.g., trying to fit a line to a curved relationship).
+- Learning rate (η): Step size for gradient descent updates. Too big ⇒ unstable; too small ⇒ slow.
+- Epoch: One full pass over the training data.
+- Batch/Minibatch: The subset of examples used to compute each gradient step.
+- Activation function: The “squish” nonlinearity (like sigmoid) that lets networks model curves.
+
 ## Quick sanity checks you can do
 
 - Linear regression: plot the points and the line; errors should be evenly spread above/below.
 - Logistic regression: draw the colored points and the decision line; most greens on one side, reds on the other.
 - Neural net: visualize the colored background (confidence); it should curve around the classes and match the scatter.
-
