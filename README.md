@@ -11,6 +11,10 @@ npm start
 
 The development server opens the guided story in your browser. Build artifacts can be produced with `npm run build`.
 
+## Try your own data
+
+Each lesson panel includes a **Train on this data** editor. Paste a JSON array that matches the fields shown in the table (for example `{ "hours": 4, "score": 70 }` for linear regression or `{ "features": [6, 5], "label": 1 }` for the classifiers) and press the button to rerun the algorithm. The canvas and metrics refresh instantly so you can see how different observations reshape Ada's models.
+
 ## Algorithms and visuals
 
 ### 1. Linear Regression – drawing the tasting trend line
